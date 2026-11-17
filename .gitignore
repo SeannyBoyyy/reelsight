@@ -1,0 +1,14 @@
+# Generated on first run, specific to your screen
+config.json
+archive/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Packaging
+build/
+dist/
+*.spec
