@@ -1,6 +1,5 @@
 # Generated on first run, specific to your screen
 config.json
-archive/
 
 # Python
 __pycache__/
@@ -12,3 +11,5 @@ venv/
 build/
 dist/
 *.spec
+*.zip
+archive/

@@ -7,23 +7,25 @@ A small Windows tool that automates the click-to-cast, click-fast fishing miniga
 ## Read this first
 
 - **It may break a game's rules.** Roblox and individual game developers can ban accounts for automation, and enforcement varies. ReelSight does not inject code, read game memory or use an executor, but that does not guarantee you are safe. Use it at your own risk, ideally on an alt account.
-- **It only works with Roblox visible and focused.** It captures the screen and clicks where your cursor is. A minimized or covered window can't be read.
-- **It is tuned to one game's UI** (as of November 2026). If the developers change the fishing UI, detection may stop working until the settings are adjusted.
+- **Roblox must stay visible and focused.** It captures the screen and clicks where your cursor is. A minimized or covered window can't be read.
+- **It is tuned to one game's UI** (as of November 2026). If the developers change the fishing UI, detection may stop working until you re-pick the detection areas.
 
 ## How it works
 
 1. Holds the mouse button briefly to cast.
 2. Watches a small area for the red **STOP** button that appears while a fish is biting.
 3. While STOP is visible, clicks rapidly (around 40 clicks per second on the author's PC).
-4. After reeling, looks for the red **"It got away..."** text to count escapes.
+4. Looks for the red **"It got away..."** text to count escapes. "Caught" means no escape text was seen, so the success rate is an estimate.
 5. Repeats.
 
 It only touches your screen and mouse. It does not talk to the game or the network.
 
+**Safety zone.** It only clicks while your cursor is over the water (the middle of the Roblox window by default). This keeps clicks off Shop, Index, the hotbar and the STOP button itself. If the cursor leaves that zone or Roblox loses focus, it stops clicking and waits.
+
 ## Requirements
 
 - Windows 10 or 11
-- Python 3.10 or newer
+- Python 3.10 or newer (the window app uses `tkinter`, which comes with the standard Windows installer)
 - Roblox in windowed or borderless mode, visible on screen (exclusive fullscreen may block screen capture; untested)
 
 ## Setup
@@ -34,39 +36,65 @@ cd reelsight
 python -m pip install -r requirements.txt
 ```
 
-## Usage
+## Window app (recommended)
 
-1. Open Roblox and equip the fishing rod at the water.
-2. Run:
+```powershell
+python app.py
+```
 
-   ```powershell
-   python reelsight.py
-   ```
+1. Click **Start** (or press **F6**).
+2. Click into Roblox and hover over the water.
+3. It casts, reels and repeats. **F6** pauses and resumes, **F7** stops.
 
-3. Click into Roblox and put the cursor over empty water (not over a button).
-4. Press **F6** to start. Press **F6** again to pause and **F7** to quit.
+Keep the ReelSight window beside Roblox, not on top of it, or it will cover the area being scanned.
 
-The status line shows casts, catches, escapes and the click rate of the last reel.
+The window shows live stats (casts, caught, escaped, success rate, click speed, runtime), editable settings, and a live detection readout.
 
-### Check detection first
+### Set the detection areas
+
+If the STOP button is never detected (for example on a different screen size or window layout), pick the area yourself:
+
+1. Click **Set STOP area...**.
+2. In Roblox, cast a line and wait until the STOP button is on screen.
+3. Press **F8**. ReelSight freezes a screenshot of the game.
+4. Drag a box tightly around the STOP button and click **Save**.
+
+ReelSight also sets the minimum pixel threshold from what it finds in your box. Do the same with **Set escape area...** for the "It got away..." text. That text only shows for about two seconds, so press F8 right after a fish escapes.
+
+**Reset areas** restores the defaults.
+
+Settings from the window are saved to `%APPDATA%\ReelSight\config.json`.
+
+## Terminal version
+
+```powershell
+python reelsight.py
+```
+
+Same engine, no window. **F6** starts and pauses, **F7** quits. Settings are in `config.json` next to the script, created on first run.
+
+To check detection without clicking:
 
 ```powershell
 python reelsight.py test
 ```
 
-With no clicking, this prints live pixel counts:
+`STOP red` should jump when the STOP button appears, and `escape text` should jump when "It got away..." appears.
 
-- `red pixels` should jump when the STOP button appears.
-- `escape text` should jump when "It got away..." appears.
+## Build a standalone .exe
 
-If the numbers never jump, see [Tuning](#tuning).
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m PyInstaller --onefile --noconsole --name ReelSight app.py
+```
+
+The result is `dist\ReelSight.exe`. Antivirus programs sometimes flag PyInstaller apps that send mouse clicks. That is a false positive, but you may need to allow it. The exe is Windows only.
 
 ## Settings
 
-A `config.json` is created on first run. Edit it to change settings.
-
 | Setting | Default | Meaning |
 |---|---|---|
+| `window_title` | `Roblox` | Title of the window to watch. |
 | `cast_hold` | `0.15` | Seconds to hold the mouse button when casting. |
 | `bite_timeout` | `20` | Seconds to wait for a bite before recasting. |
 | `click_interval` | `0.02` | Seconds between clicks while reeling. |
@@ -79,20 +107,20 @@ A `config.json` is created on first run. Edit it to change settings.
 | `escape_min_pixels` | `40` | Pixels needed to count the escape text as visible. |
 | `escape_watch` | `3.0` | Seconds to look for the escape text after reeling. |
 | `require_focus` | `true` | Only act while Roblox is the active window. |
+| `safe_zone` | see file | The cursor must stay in this part of the window for clicks to be sent. |
 
 ## Tuning
 
-- **Fish keep escaping.** Check the click rate in the status line. If it is low, lower `click_interval`. If it is high but fish still escape, try raising it to about `0.04`, since some games drop clicks that come too fast.
-- **Never detects STOP.** The `area` box is probably on the wrong spot for your layout. Run `python pick_color.py` and hover over the STOP button to read its color and position, then adjust `area` or the red check in `reelsight.py`.
+- **Fish keep escaping.** Check "Last reel" for the click speed. If it is low, lower `click_interval`. If it is high but fish still escape, try raising it to about `0.04`, since some games drop clicks that come too fast.
+- **Never detects STOP.** Use **Set STOP area...** (see above). `python pick_color.py` is also available: hover over a spot to read its position and color.
+- **Stuck on "Waiting".** Click into Roblox and move the cursor into the middle of the window. Widen `safe_zone` if needed.
 - **Many "no bite" results.** Raise `bite_timeout`, or make sure the cast lands in water.
-- **Escape count looks wrong.** The catch count is an estimate: "caught" means no escape text was seen. If escape detection misses, escapes get counted as catches.
-- **Different screen sizes.** The detection areas are fractions of the Roblox window, so they scale with window size, but they are only tested on one layout.
 
 ## Limitations
 
 - Windows only (uses the Win32 API).
 - Not tested on multiple monitors with different scaling.
-- Success rate figures are estimates.
+- The success rate is an estimate.
 - Works only while Roblox is visible and focused.
 
 ## Disclaimer
