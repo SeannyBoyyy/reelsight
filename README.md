@@ -4,6 +4,8 @@ A small Windows tool that automates the click-to-cast, click-fast fishing miniga
 
 **[Download the latest ReelSight release](https://github.com/SeannyBoyyy/reelsight/releases/latest)**
 
+![ReelSight window](docs/screenshot.png)
+
 > **Not affiliated with Roblox Corporation or the developers of *Steal an Egg*.** "Roblox" is a trademark of Roblox Corporation.
 
 ## Read this first
