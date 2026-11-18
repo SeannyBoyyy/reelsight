@@ -1,6 +1,6 @@
 """ReelSight window app (Windows). Run: python app.py
 
-F6 = start / pause, F7 = stop, F8 = capture a screenshot for the area picker.
+F6 = start / pause, F7 = pause (never starts), F8 = capture a screenshot for the area picker.
 """
 
 from __future__ import annotations
@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import math
 import os
+import sys
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -35,10 +36,22 @@ PICK_LABELS = {
     "escape_area": "'It got away...' text",
 }
 
+# Status colors (dark enough to read on the default light theme)
+COLOR_RUNNING = "#1a7f37"   # green
+COLOR_WAITING = "#b26a00"   # amber
+COLOR_PAUSED = "#666666"    # gray
+WAITING_PREFIX = "Waiting:"  # engine.py state text when Roblox is not ready
+
 DEFAULT_HINT = (
     "1. Click Start (F6).  2. Click into Roblox and hover over the water.\n"
     "Keep this window beside Roblox, not on top of it."
 )
+
+
+def resource_path(relative: str) -> str:
+    """Path to a bundled file, in source runs and inside a PyInstaller exe."""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative)
 
 
 def config_path() -> str:
@@ -166,27 +179,30 @@ class App:
         root = self.root
         root.title(f"{APP_NAME} {eng.__version__}")
         root.resizable(False, False)
+        try:
+            root.iconbitmap(default=resource_path(os.path.join("assets", "reelsight.ico")))
+        except Exception:
+            pass  # missing icon is not fatal
         main = ttk.Frame(root, padding=12)
         main.grid()
 
         ttk.Label(main, text=APP_NAME, font=("Segoe UI", 16, "bold")).grid(
             row=0, column=0, sticky="w"
         )
-        self.state_var = tk.StringVar(value="Paused")
-        ttk.Label(
+        self.state_var = tk.StringVar(value="\u25cf Paused")
+        self.state_label = ttk.Label(
             main,
             textvariable=self.state_var,
             font=("Segoe UI", 10, "bold"),
+            foreground=COLOR_PAUSED,
             wraplength=380,
-        ).grid(row=1, column=0, sticky="w", pady=(2, 8))
+        )
+        self.state_label.grid(row=1, column=0, sticky="w", pady=(2, 8))
 
         buttons = ttk.Frame(main)
         buttons.grid(row=2, column=0, sticky="w")
         self.toggle_btn = ttk.Button(buttons, text="Start (F6)", width=14, command=self.toggle)
         self.toggle_btn.pack(side="left", padx=(0, 6))
-        ttk.Button(buttons, text="Stop (F7)", width=10, command=self.stop).pack(
-            side="left", padx=(0, 6)
-        )
         ttk.Button(buttons, text="Reset stats", command=self.engine.reset_stats).pack(
             side="left"
         )
@@ -215,9 +231,16 @@ class App:
                 row=row, column=col + 1, sticky="w", padx=(0, 14)
             )
 
-        # Settings
+        # Settings (hidden until the user opens it)
+        self.settings_visible = False
+        self.settings_toggle_btn = ttk.Button(
+            main, text="Settings \u25b8", command=self.toggle_settings
+        )
+        self.settings_toggle_btn.grid(row=4, column=0, sticky="w", pady=(10, 0))
         settings_box = ttk.LabelFrame(main, text="Settings", padding=8)
-        settings_box.grid(row=4, column=0, sticky="we", pady=(10, 0))
+        settings_box.grid(row=5, column=0, sticky="we", pady=(6, 0))
+        settings_box.grid_remove()
+        self.settings_box = settings_box
         self.field_vars: dict[str, tk.StringVar] = {}
         for index, (label, key, _kind, _low) in enumerate(SETTINGS_FIELDS):
             row, col = index // 2, (index % 2) * 2
@@ -240,7 +263,7 @@ class App:
 
         # Detection
         detect_box = ttk.LabelFrame(main, text="Detection", padding=8)
-        detect_box.grid(row=5, column=0, sticky="we", pady=(10, 0))
+        detect_box.grid(row=6, column=0, sticky="we", pady=(10, 0))
         self.live_var = tk.StringVar(value="-")
         ttk.Label(detect_box, textvariable=self.live_var, wraplength=380).grid(
             row=0, column=0, columnspan=3, sticky="w", pady=(0, 6)
@@ -260,7 +283,7 @@ class App:
         # Hint + footer
         self.hint_var = tk.StringVar(value=DEFAULT_HINT)
         ttk.Label(main, textvariable=self.hint_var, wraplength=380, justify="left").grid(
-            row=6, column=0, sticky="w", pady=(10, 0)
+            row=7, column=0, sticky="w", pady=(10, 0)
         )
         ttk.Label(
             main,
@@ -271,7 +294,7 @@ class App:
             wraplength=380,
             foreground="#666666",
             font=("Segoe UI", 8),
-        ).grid(row=7, column=0, sticky="w", pady=(8, 0))
+        ).grid(row=8, column=0, sticky="w", pady=(8, 0))
 
     def sync_fields(self) -> None:
         for _label, key, _kind, _low in SETTINGS_FIELDS:
@@ -279,6 +302,15 @@ class App:
         self.focus_var.set(bool(self.config["require_focus"]))
 
     # ---------- actions ----------
+
+    def toggle_settings(self) -> None:
+        self.settings_visible = not self.settings_visible
+        if self.settings_visible:
+            self.settings_box.grid()
+            self.settings_toggle_btn.config(text="Settings \u25be")
+        else:
+            self.settings_box.grid_remove()
+            self.settings_toggle_btn.config(text="Settings \u25b8")
 
     def toggle(self) -> None:
         self.cancel_pick()
@@ -397,7 +429,14 @@ class App:
 
     def refresh(self) -> None:
         engine = self.engine
-        self.state_var.set(engine.state if engine.is_active else "Paused")
+        if not engine.is_active:
+            text, color = "Paused", COLOR_PAUSED
+        elif engine.state.startswith(WAITING_PREFIX):
+            text, color = engine.state, COLOR_WAITING
+        else:
+            text, color = engine.state, COLOR_RUNNING
+        self.state_var.set(f"\u25cf {text}")
+        self.state_label.config(foreground=color)
         self.toggle_btn.config(text="Pause (F6)" if engine.is_active else "Start (F6)")
         stats = engine.stats
         values = {

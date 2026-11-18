@@ -2,7 +2,7 @@
 
 A small Windows tool that automates the click-to-cast, click-fast fishing minigame in the Roblox game *Steal an Egg*. It reads your screen for the reel UI and sends mouse clicks. It runs outside Roblox.
 
-**[Download ReelSight v0.2.0](https://github.com/SeannyBoyyy/reelsight/releases/tag/v0.2.0)**
+**[Download the latest ReelSight release](https://github.com/SeannyBoyyy/reelsight/releases/latest)**
 
 > **Not affiliated with Roblox Corporation or the developers of *Steal an Egg*.** "Roblox" is a trademark of Roblox Corporation.
 
@@ -87,7 +87,7 @@ python reelsight.py test
 
 ```powershell
 python -m pip install -r requirements-dev.txt
-python -m PyInstaller --onefile --noconsole --name ReelSight app.py
+python -m PyInstaller --onefile --noconsole --name ReelSight --icon assets\reelsight.ico --add-data "assets\reelsight.ico;assets" app.py
 ```
 
 The result is `dist\ReelSight.exe`. Antivirus programs sometimes flag PyInstaller apps that send mouse clicks. That is a false positive, but you may need to allow it. The exe is Windows only.
