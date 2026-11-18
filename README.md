@@ -2,6 +2,8 @@
 
 A small Windows tool that automates the click-to-cast, click-fast fishing minigame in the Roblox game *Steal an Egg*. It reads your screen for the reel UI and sends mouse clicks. It runs outside Roblox.
 
+**[Download ReelSight v0.2.0](https://github.com/SeannyBoyyy/reelsight/releases/tag/v0.2.0)**
+
 > **Not affiliated with Roblox Corporation or the developers of *Steal an Egg*.** "Roblox" is a trademark of Roblox Corporation.
 
 ## Read this first
