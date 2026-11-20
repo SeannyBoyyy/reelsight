@@ -28,6 +28,7 @@ SETTINGS_FIELDS = [
     ("Bite timeout (s)", "bite_timeout", float, 1.0),
     ("Reel timeout (s)", "reel_timeout", float, 1.0),
     ("After-catch delay (s)", "after_catch_delay", float, 0.0),
+    ("Escape watch (s)", "escape_watch", float, 0.2),
     ("Min STOP pixels", "min_red_pixels", int, 1),
     ("Min escape pixels", "escape_min_pixels", int, 1),
 ]
