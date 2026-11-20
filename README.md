@@ -46,9 +46,13 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-1. Click **Start** (or press **F6**).
+1. Click **Start** (or press the start/pause hotkey, **F6** by default).
 2. Click into Roblox and hover over the water.
-3. It casts, reels and repeats. **F6** pauses and resumes, **F7** stops.
+3. It casts, reels and repeats. The hotkey pauses and resumes.
+
+To change the hotkey, open **Settings**, click **Change...** and press the key you want. **Esc** cancels. Almost any single key works, including letters, digits, the numpad and the arrow keys. These are not allowed: **F7** (it only quits the terminal version; the window app ignores it), **F8** (area picker), Esc, and Shift, Ctrl, Alt and Windows. Combinations such as Ctrl+F6 are not supported.
+
+Keys that type a character or move your character (letters, digits, Space, arrows and so on) are allowed, but ReelSight asks you to confirm, because it will start or pause whenever you press them, including while you chat. F-keys, Insert, Delete, Home, End and Page Up/Down are safer. Roblox uses a few keys itself, for example F11 toggles fullscreen.
 
 Keep the ReelSight window beside Roblox, not on top of it, or it will cover the area being scanned.
 
@@ -75,7 +79,7 @@ Settings from the window are saved to `%APPDATA%\ReelSight\config.json`.
 python reelsight.py
 ```
 
-Same engine, no window. **F6** starts and pauses, **F7** quits. Settings are in `config.json` next to the script, created on first run.
+Same engine, no window. The start/pause hotkey (`toggle_hotkey`, **F6** by default) starts and pauses, and **F7** quits. F7 works only in the terminal version; the window app ignores it. Settings are in `config.json` next to the script, created on first run.
 
 To check detection without clicking:
 
@@ -111,6 +115,7 @@ The result is `dist\ReelSight.exe`. Antivirus programs sometimes flag PyInstalle
 | `escape_min_pixels` | `40` | Pixels needed to count the escape text as visible. |
 | `escape_watch` | `3.0` | Seconds to look for the escape text after reeling. |
 | `require_focus` | `true` | Only act while Roblox is the active window. |
+| `toggle_hotkey` | `F6` | Start/pause key, by name: `F9`, `Insert`, `Num 5`, `Q`, and so on. F7 and F8 are reserved. An invalid name falls back to `F6`. |
 | `safe_zone` | see file | The cursor must stay in this part of the window for clicks to be sent. |
 
 ## Tuning

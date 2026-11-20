@@ -15,7 +15,7 @@ from ctypes import wintypes
 
 import mss
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 ctypes.windll.shcore.SetProcessDpiAwareness(2)  # must run before any window exists
 
@@ -29,6 +29,52 @@ USER32.GetForegroundWindow.restype = wintypes.HWND
 USER32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
 
 VK_F6, VK_F7, VK_F8 = 0x75, 0x76, 0x77
+VK_ESCAPE = 0x1B
+
+
+def _build_key_table() -> dict[str, int]:
+    """Key name -> Windows virtual-key code, for every key allowed as the hotkey.
+
+    Left out on purpose: Esc (cancels hotkey capture), Shift/Ctrl/Alt/Windows
+    (they combine with other keys) and mouse buttons.
+    """
+    table: dict[str, int] = {}
+    for n in range(1, 25):
+        table[f"F{n}"] = 0x6F + n  # F1 = 0x70
+    for i in range(26):
+        table[chr(ord("A") + i)] = 0x41 + i
+    for i in range(10):
+        table[str(i)] = 0x30 + i
+        table[f"Num {i}"] = 0x60 + i
+    table.update({
+        "Num *": 0x6A, "Num +": 0x6B, "Num -": 0x6D, "Num .": 0x6E, "Num /": 0x6F,
+        "Space": 0x20, "Enter": 0x0D, "Tab": 0x09, "Backspace": 0x08,
+        "Insert": 0x2D, "Delete": 0x2E, "Home": 0x24, "End": 0x23,
+        "Page Up": 0x21, "Page Down": 0x22,
+        "Left": 0x25, "Up": 0x26, "Right": 0x27, "Down": 0x28,
+        "Caps Lock": 0x14, "Pause": 0x13, "Scroll Lock": 0x91, "Num Lock": 0x90,
+        "Print Screen": 0x2C,
+        ";": 0xBA, "=": 0xBB, ",": 0xBC, "-": 0xBD, ".": 0xBE, "/": 0xBF,
+        "`": 0xC0, "[": 0xDB, "\\": 0xDC, "]": 0xDD, "'": 0xDE,
+    })
+    return table
+
+
+KEY_CODES = _build_key_table()
+KEY_NAMES = {code: name for name, code in KEY_CODES.items()}
+CAPTURE_VKS = sorted(KEY_NAMES)
+
+# Not allowed as the start/pause hotkey:
+#   F7 = quit in the terminal version, F8 = screenshot capture for the area picker
+HOTKEY_RESERVED = {"F7", "F8"}
+
+# Keys that do not type a character or move the player in Roblox. Any other key
+# is allowed, but the app asks for confirmation first.
+SAFE_HOTKEYS = {f"F{n}" for n in range(1, 25)} | {
+    "Insert", "Delete", "Home", "End", "Page Up", "Page Down",
+    "Pause", "Scroll Lock", "Num Lock", "Print Screen",
+}
+_CANONICAL = {name.upper(): name for name in KEY_CODES}
 
 DEFAULTS = {
     "window_title": "Roblox",
@@ -45,6 +91,7 @@ DEFAULTS = {
     "escape_min_pixels": 40,
     "escape_watch": 3.0,         # seconds to look for the escape text
     "require_focus": True,       # only act while Roblox is the active window
+    "toggle_hotkey": "F6",       # start/pause key name, e.g. F9, Insert, Q (not F7/F8)
     # The cursor must stay inside this box (over the water), so clicks never
     # land on Shop, Index, STOP, the hotbar or the Roblox menu.
     "safe_zone": {"left": 0.20, "right": 0.80, "top": 0.15, "bottom": 0.80},
@@ -52,6 +99,22 @@ DEFAULTS = {
 
 
 # ---------- config ----------
+
+def normalize_hotkey(name) -> str:
+    """Return a valid hotkey name (case-insensitive), falling back to the default."""
+    key = _CANONICAL.get(str(name).strip().upper())
+    return key if key and key not in HOTKEY_RESERVED else DEFAULTS["toggle_hotkey"]
+
+
+def hotkey_vk(name) -> int:
+    """Windows virtual-key code for a hotkey name such as "F6" or "Insert"."""
+    return KEY_CODES[normalize_hotkey(name)]
+
+
+def is_risky_hotkey(name) -> bool:
+    """True for keys that type or move in Roblox (letters, digits, Space, arrows...)."""
+    return normalize_hotkey(name) not in SAFE_HOTKEYS
+
 
 def load_config(path: str) -> dict:
     config = json.loads(json.dumps(DEFAULTS))
@@ -68,6 +131,7 @@ def load_config(path: str) -> dict:
                 config[key].update(value)
             else:
                 config[key] = value
+    config["toggle_hotkey"] = normalize_hotkey(config["toggle_hotkey"])
     save_config(config, path)
     return config
 

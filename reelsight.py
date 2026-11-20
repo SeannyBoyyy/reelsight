@@ -1,6 +1,6 @@
 """ReelSight terminal version (Windows).
 
-F6 = start / pause, F7 = quit.
+Start/pause hotkey: F6 by default (`toggle_hotkey` in config.json). F7 = quit.
 `python reelsight.py test` checks detection without clicking.
 For the window app, run `python app.py` instead.
 """
@@ -57,13 +57,14 @@ def main() -> None:
 
     engine = eng.Engine(config)
     keys = eng.Keys()
-    print("F6 = start/pause | F7 = quit")
-    print("Click into Roblox, put the cursor over the water, then press F6.")
+    hotkey = config["toggle_hotkey"]
+    print(f"{hotkey} = start/pause | F7 = quit")
+    print(f"Click into Roblox, put the cursor over the water, then press {hotkey}.")
     try:
         while True:
             if keys.pressed(eng.VK_F7):
                 break
-            if keys.pressed(eng.VK_F6):
+            if keys.pressed(eng.hotkey_vk(hotkey)):
                 engine.toggle()
             print("\r" + status_line(engine).ljust(120), end="", flush=True)
             time.sleep(0.05)

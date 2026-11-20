@@ -1,6 +1,7 @@
 """ReelSight window app (Windows). Run: python app.py
 
-F6 = start / pause, F7 = pause (never starts), F8 = capture a screenshot for the area picker.
+Start/pause hotkey: F6 by default (change it under Settings).
+F8 = capture a screenshot for the area picker.
 """
 
 from __future__ import annotations
@@ -43,7 +44,7 @@ COLOR_PAUSED = "#666666"    # gray
 WAITING_PREFIX = "Waiting:"  # engine.py state text when Roblox is not ready
 
 DEFAULT_HINT = (
-    "1. Click Start (F6).  2. Click into Roblox and hover over the water.\n"
+    "1. Click Start.  2. Click into Roblox and hover over the water.\n"
     "Keep this window beside Roblox, not on top of it."
 )
 
@@ -166,6 +167,7 @@ class App:
         self.keys = eng.Keys()
         self.sct = mss.MSS()  # main-thread screenshotter (the engine has its own)
         self.pending_pick: str | None = None
+        self.capturing = False  # True while waiting for the user to press a new hotkey
         self.tick = 0
 
         self.build_ui()
@@ -201,7 +203,12 @@ class App:
 
         buttons = ttk.Frame(main)
         buttons.grid(row=2, column=0, sticky="w")
-        self.toggle_btn = ttk.Button(buttons, text="Start (F6)", width=14, command=self.toggle)
+        self.toggle_btn = ttk.Button(
+            buttons,
+            text=f"Start ({self.config['toggle_hotkey']})",
+            width=18,
+            command=self.toggle,
+        )
         self.toggle_btn.pack(side="left", padx=(0, 6))
         ttk.Button(buttons, text="Reset stats", command=self.engine.reset_stats).pack(
             side="left"
@@ -252,7 +259,21 @@ class App:
             ttk.Entry(settings_box, textvariable=var, width=8).grid(
                 row=row, column=col + 1, sticky="w", padx=(0, 14), pady=2
             )
-        last_row = (len(SETTINGS_FIELDS) + 1) // 2
+        hotkey_row = (len(SETTINGS_FIELDS) + 1) // 2
+        ttk.Label(settings_box, text="Start/Pause hotkey").grid(
+            row=hotkey_row, column=0, sticky="w", padx=(0, 6), pady=2
+        )
+        self.hotkey_var = tk.StringVar()
+        ttk.Label(
+            settings_box,
+            textvariable=self.hotkey_var,
+            font=("Segoe UI", 10, "bold"),
+            width=14,
+        ).grid(row=hotkey_row, column=1, sticky="w", pady=2)
+        ttk.Button(settings_box, text="Change...", command=self.start_hotkey_capture).grid(
+            row=hotkey_row, column=2, sticky="w", pady=2
+        )
+        last_row = hotkey_row + 1
         self.focus_var = tk.BooleanVar()
         ttk.Checkbutton(
             settings_box, text="Only act while Roblox is focused", variable=self.focus_var
@@ -300,6 +321,7 @@ class App:
         for _label, key, _kind, _low in SETTINGS_FIELDS:
             self.field_vars[key].set(str(self.config[key]))
         self.focus_var.set(bool(self.config["require_focus"]))
+        self.hotkey_var.set(eng.normalize_hotkey(self.config["toggle_hotkey"]))
 
     # ---------- actions ----------
 
@@ -315,10 +337,6 @@ class App:
     def toggle(self) -> None:
         self.cancel_pick()
         self.engine.toggle()
-
-    def stop(self) -> None:
-        self.cancel_pick()
-        self.engine.pause()
 
     def cancel_pick(self) -> None:
         if self.pending_pick is not None:
@@ -408,16 +426,58 @@ class App:
         self.hint_var.set(note)
         messagebox.showinfo(APP_NAME, note)
 
+    # ---------- hotkey capture ----------
+
+    def start_hotkey_capture(self) -> None:
+        self.cancel_pick()
+        self.engine.pause()
+        for code in eng.CAPTURE_VKS + [eng.VK_ESCAPE]:
+            self.keys.pressed(code)  # prime: ignore keys that are already held down
+        self.capturing = True
+        self.hotkey_var.set("Press a key...")
+        self.hint_var.set("Press the key you want for Start/Pause. Esc cancels.")
+
+    def finish_hotkey_capture(self, note: str) -> None:
+        self.capturing = False
+        self.hotkey_var.set(eng.normalize_hotkey(self.config["toggle_hotkey"]))
+        self.hint_var.set(note)
+
+    def poll_hotkey_capture(self) -> None:
+        if self.keys.pressed(eng.VK_ESCAPE):
+            self.finish_hotkey_capture("Hotkey unchanged.")
+            return
+        for code in eng.CAPTURE_VKS:
+            if not self.keys.pressed(code):
+                continue
+            name = eng.KEY_NAMES[code]
+            if name in eng.HOTKEY_RESERVED:
+                self.hint_var.set(f"{name} is reserved. Press a different key (Esc cancels).")
+                return
+            self.capturing = False  # stop listening while a dialog is open
+            if eng.is_risky_hotkey(name) and not messagebox.askyesno(
+                APP_NAME,
+                f"'{name}' also types a character or moves you in Roblox. "
+                "ReelSight will start or pause whenever you press it, "
+                "including while you chat or play.\n\nUse it anyway?",
+            ):
+                self.finish_hotkey_capture("Hotkey unchanged.")
+                return
+            self.config["toggle_hotkey"] = name
+            eng.save_config(self.config, self.cfg_path)
+            self.finish_hotkey_capture(f"Start/Pause hotkey set to {name}.")
+            return
+
     # ---------- refresh loop ----------
 
     def poll(self) -> None:
         try:
-            if self.keys.pressed(eng.VK_F6):
-                self.toggle()
-            if self.keys.pressed(eng.VK_F7):
-                self.stop()
-            if self.keys.pressed(eng.VK_F8):
-                self.capture_for_pick()
+            if self.capturing:
+                self.poll_hotkey_capture()
+            else:
+                if self.keys.pressed(eng.hotkey_vk(self.config["toggle_hotkey"])):
+                    self.toggle()
+                if self.keys.pressed(eng.VK_F8):
+                    self.capture_for_pick()
             self.refresh()
             self.tick += 1
             if self.tick % 6 == 0:
@@ -437,7 +497,10 @@ class App:
             text, color = engine.state, COLOR_RUNNING
         self.state_var.set(f"\u25cf {text}")
         self.state_label.config(foreground=color)
-        self.toggle_btn.config(text="Pause (F6)" if engine.is_active else "Start (F6)")
+        hotkey = eng.normalize_hotkey(self.config["toggle_hotkey"])
+        self.toggle_btn.config(
+            text=f"Pause ({hotkey})" if engine.is_active else f"Start ({hotkey})"
+        )
         stats = engine.stats
         values = {
             "casts": stats["casts"],
