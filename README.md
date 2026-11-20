@@ -52,7 +52,7 @@ python app.py
 
 To change the hotkey, open **Settings**, click **Change...** and press the key you want. **Esc** cancels. Almost any single key works, including letters, digits, the numpad and the arrow keys. These are not allowed: **F7** (it only quits the terminal version; the window app ignores it), **F8** (area picker), Esc, and Shift, Ctrl, Alt and Windows. Combinations such as Ctrl+F6 are not supported.
 
-Keys that type a character or move your character (letters, digits, Space, arrows and so on) are allowed, but ReelSight asks you to confirm, because it will start or pause whenever you press them, including while you chat. F-keys, Insert, Delete, Home, End and Page Up/Down are safer. Roblox uses a few keys itself, for example F11 toggles fullscreen.
+Keys that type a character or move your character (letters, digits, Space, arrows and so on) are allowed, but ReelSight asks you to confirm, because they will start or pause the app whenever you press them, including while you chat. F6, Insert, Delete, Home, End and Page Up/Down are safer choices. Roblox reserves keys such as F9 and F11 for its developer console and fullscreen controls, so ReelSight asks for confirmation before using them.
 
 Keep the ReelSight window beside Roblox, not on top of it, or it will cover the area being scanned.
 

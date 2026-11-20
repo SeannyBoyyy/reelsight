@@ -15,7 +15,7 @@ from ctypes import wintypes
 
 import mss
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 ctypes.windll.shcore.SetProcessDpiAwareness(2)  # must run before any window exists
 
@@ -70,7 +70,7 @@ HOTKEY_RESERVED = {"F7", "F8"}
 
 # Keys that do not type a character or move the player in Roblox. Any other key
 # is allowed, but the app asks for confirmation first.
-SAFE_HOTKEYS = {f"F{n}" for n in range(1, 25)} | {
+SAFE_HOTKEYS = ({f"F{n}" for n in range(1, 25)} - {"F9", "F11"}) | {
     "Insert", "Delete", "Home", "End", "Page Up", "Page Down",
     "Pause", "Scroll Lock", "Num Lock", "Print Screen",
 }

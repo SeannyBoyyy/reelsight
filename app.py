@@ -456,9 +456,13 @@ class App:
             self.capturing = False  # stop listening while a dialog is open
             if eng.is_risky_hotkey(name) and not messagebox.askyesno(
                 APP_NAME,
-                f"'{name}' also types a character or moves you in Roblox. "
-                "ReelSight will start or pause whenever you press it, "
-                "including while you chat or play.\n\nUse it anyway?",
+                f"The {name} key is also used for typing or moving in Roblox. "
+                "ReelSight will start or pause every time you press it, "
+                "including while you chat or play.\n\n"
+                "Safer choices: F6, Insert, Delete, Home, End.\n\n"
+                "Use it anyway?",
+                icon="warning",
+                default="no",
             ):
                 self.finish_hotkey_capture("Hotkey unchanged.")
                 return
