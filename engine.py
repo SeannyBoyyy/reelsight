@@ -15,7 +15,7 @@ from ctypes import wintypes
 
 import mss
 
-__version__ = "0.2.5"
+__version__ = "0.2.4"
 
 ctypes.windll.shcore.SetProcessDpiAwareness(2)  # must run before any window exists
 
@@ -83,7 +83,6 @@ DEFAULTS = {
     "click_interval": 0.02,      # seconds between clicks while reeling
     "reel_timeout": 25,          # max seconds of reeling per fish
     "after_catch_delay": 4,      # seconds to let the catch popup clear
-    "after_escape_delay": 0.5,   # seconds before recasting after a fish gets away
     "min_red_pixels": 15,        # red pixels needed to count STOP as visible
     "scan_step": 4,              # pixel skip when scanning (higher = faster)
     # Areas are fractions of the Roblox window: left, right, top, bottom
@@ -133,13 +132,6 @@ def load_config(path: str) -> dict:
             else:
                 config[key] = value
     config["toggle_hotkey"] = normalize_hotkey(config["toggle_hotkey"])
-    # escape_watch is no longer in the Settings panel. Reset values that are
-    # missing, not numbers, or too short to be useful (older builds allowed 0.2).
-    try:
-        watch = float(config["escape_watch"])
-    except (TypeError, ValueError):
-        watch = 0.0
-    config["escape_watch"] = watch if watch >= 1.0 else DEFAULTS["escape_watch"]
     save_config(config, path)
     return config
 
@@ -446,23 +438,16 @@ class Engine:
 
         self.state = "Reeling"
         spent = 0.0
-        escaped = self._reel(sct)
-        if escaped:
+        if self._reel(sct):
             self.stats["escaped"] += 1
         else:
             self.state = "Checking result"
             started = time.monotonic()
-            escaped = self._watch_result(sct)
+            self._watch_result(sct)
             spent = time.monotonic() - started
 
-        if escaped:
-            # No reward popup follows an escape, so the next cast can go out sooner.
-            self.state = "Fish got away"
-            delay = config["after_escape_delay"]
-        else:
-            self.state = "Catch popup"
-            delay = config["after_catch_delay"]
-        self._sleep(max(0.0, delay - spent))
+        self.state = "Catch popup"
+        self._sleep(max(0.0, config["after_catch_delay"] - spent))
 
     def _reel(self, sct) -> bool:
         """Click fast while STOP is visible. Returns True if the fish escaped."""
@@ -492,17 +477,14 @@ class Engine:
         self.stats["last"] = f"{clicks / elapsed:.0f} clicks/s"
         return escaped
 
-    def _watch_result(self, sct) -> bool:
-        """After reeling ends, look briefly for the escape text. True if it escaped."""
+    def _watch_result(self, sct) -> None:
+        """After reeling ends, look briefly for the escape text."""
         config = self.config
-        # Never watch longer than the catch delay, so After-catch delay alone
-        # sets how soon the next cast goes out after a catch.
-        end = time.monotonic() + min(config["escape_watch"], config["after_catch_delay"])
+        end = time.monotonic() + config["escape_watch"]
         while time.monotonic() < end:
             self._check()
             if escape_visible(sct, config):
                 self.stats["escaped"] += 1
-                return True
+                return
             time.sleep(0.05)
         self.stats["caught"] += 1
-        return False
