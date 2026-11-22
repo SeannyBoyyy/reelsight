@@ -15,7 +15,7 @@ from ctypes import wintypes
 
 import mss
 
-__version__ = "0.2.4"
+__version__ = "0.2.3"
 
 ctypes.windll.shcore.SetProcessDpiAwareness(2)  # must run before any window exists
 

@@ -113,7 +113,7 @@ The result is `dist\ReelSight.exe`. Antivirus programs sometimes flag PyInstalle
 | `area` | see file | STOP button area, as fractions of the Roblox window. |
 | `escape_area` | see file | "It got away..." text area, as fractions of the Roblox window. |
 | `escape_min_pixels` | `40` | Pixels needed to count the escape text as visible. |
-| `escape_watch` | `3.0` | Seconds to look for the escape text after reeling. It counts toward `after_catch_delay`, so it is also the shortest wait after a catch. Lower it to recast faster; if it is too short, escapes that show up late are counted as catches. |
+| `escape_watch` | `3.0` | Seconds to look for the escape text after reeling. |
 | `require_focus` | `true` | Only act while Roblox is the active window. |
 | `toggle_hotkey` | `F6` | Start/pause key, by name: `F9`, `Insert`, `Num 5`, `Q`, and so on. F7 and F8 are reserved. An invalid name falls back to `F6`. |
 | `safe_zone` | see file | The cursor must stay in this part of the window for clicks to be sent. |
