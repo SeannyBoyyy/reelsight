@@ -108,12 +108,13 @@ The result is `dist\ReelSight.exe`. Antivirus programs sometimes flag PyInstalle
 | `click_interval` | `0.02` | Seconds between clicks while reeling. |
 | `reel_timeout` | `25` | Maximum seconds of reeling per fish. |
 | `after_catch_delay` | `4` | Seconds to wait after a catch for the popup to clear. |
+| `after_escape_delay` | `0.5` | Seconds to wait before recasting after a fish gets away. No reward popup follows an escape, so this can be much shorter than `after_catch_delay`. |
 | `min_red_pixels` | `15` | Red pixels needed to count the STOP button as visible. |
 | `scan_step` | `4` | Pixels skipped when scanning. Higher is faster but less precise. |
 | `area` | see file | STOP button area, as fractions of the Roblox window. |
 | `escape_area` | see file | "It got away..." text area, as fractions of the Roblox window. |
 | `escape_min_pixels` | `40` | Pixels needed to count the escape text as visible. |
-| `escape_watch` | `3.0` | Seconds to look for the escape text after reeling. It counts toward `after_catch_delay`, so it is also the shortest wait after a catch. Lower it to recast faster; if it is too short, escapes that show up late are counted as catches. |
+| `escape_watch` | `3.0` | Advanced, config file only. Seconds to look for the escape text after reeling. It never runs longer than `after_catch_delay`. Values below 1.0 are reset to 3.0. |
 | `require_focus` | `true` | Only act while Roblox is the active window. |
 | `toggle_hotkey` | `F6` | Start/pause key, by name: `F9`, `Insert`, `Num 5`, `Q`, and so on. F7 and F8 are reserved. An invalid name falls back to `F6`. |
 | `safe_zone` | see file | The cursor must stay in this part of the window for clicks to be sent. |
@@ -123,7 +124,8 @@ The result is `dist\ReelSight.exe`. Antivirus programs sometimes flag PyInstalle
 - **Fish keep escaping.** Check "Last reel" for the click speed. If it is low, lower `click_interval`. If it is high but fish still escape, try raising it to about `0.04`, since some games drop clicks that come too fast.
 - **Never detects STOP.** Use **Set STOP area...** (see above). `python pick_color.py` is also available: hover over a spot to read its position and color.
 - **Stuck on "Waiting".** Click into Roblox and move the cursor into the middle of the window. Widen `safe_zone` if needed.
-- **Many "no bite" results.** Raise `bite_timeout`, or make sure the cast lands in water.
+- **Many "no bite" results.** Raise `bite_timeout`, or make sure the cast lands in water. A cast the game ignores also shows up as **No bite** after `bite_timeout` seconds. A fish that gets away is always counted as **Escaped**, never as No bite.
+- **Slow recast after a fish gets away.** Lower `after_escape_delay`. If the next cast after an escape is ignored and the app sits on "Waiting for a bite", raise it.
 
 ## Limitations
 
